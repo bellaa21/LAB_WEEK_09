@@ -18,7 +18,6 @@ import androidx.compose.ui.unit.dp
 import com.example.lab_week_09.ui.theme.LAB_WEEK_09Theme
 import com.example.lab_week_09.R
 
-//Declare a data class called Student
 data class Student(
     var name: String
 )
