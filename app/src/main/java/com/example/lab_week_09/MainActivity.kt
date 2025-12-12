@@ -16,10 +16,12 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.lab_week_09.ui.theme.LAB_WEEK_09Theme
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.ui.graphics.Color
+import com.example.lab_week_09.R
 
+//Declare a data class called Student
+data class Student(
+    var name: String
+)
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -30,8 +32,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    val list = listOf("Tanu", "Tina", "Tono")
-                    Home(list)
+                    Home()
                 }
             }
         }
@@ -39,7 +40,38 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Home(items: List<String>) {
+fun Home() {
+
+    val listData = remember {
+        mutableStateListOf(
+            Student("Tanu"),
+            Student("Tina"),
+            Student("Tono")
+        )
+    }
+
+    var inputField by remember { mutableStateOf("") }
+
+    HomeContent(
+        listData = listData,
+        inputValue = inputField,
+        onInputChange = { inputField = it },
+        onSubmit = {
+            if (inputField.isNotBlank()) {
+                listData.add(Student(inputField))
+                inputField = ""
+            }
+        }
+    )
+}
+
+@Composable
+fun HomeContent(
+    listData: List<Student>,
+    inputValue: String,
+    onInputChange: (String) -> Unit,
+    onSubmit: () -> Unit
+) {
 
     LazyColumn {
         item {
@@ -50,49 +82,35 @@ fun Home(items: List<String>) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
-                // Title
                 Text(text = stringResource(id = R.string.enter_item))
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // TextField (dummy)
                 TextField(
-                    value = "",
-                    onValueChange = {},
+                    value = inputValue,
+                    onValueChange = { onInputChange(it) },
                     modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFFEDE7F6),   // ungu muda
-                        unfocusedContainerColor = Color(0xFFEDE7F6),
-                        focusedIndicatorColor = Color.Gray,
-                        unfocusedIndicatorColor = Color.Gray
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Text
                     )
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Submit button
-                Button(
-                    onClick = {},
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF673AB7),  // purple 500
-                        contentColor = Color.White
-                    )
-                ) {
+                Button(onClick = { onSubmit() }) {
                     Text(text = stringResource(id = R.string.button_click))
                 }
             }
         }
 
-        // List items: Tanu, Tina, Tono
-        items(items) { item ->
+        items(listData) { student ->
             Column(
                 modifier = Modifier
                     .padding(vertical = 4.dp)
                     .fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(text = item)
+                Text(text = student.name)
             }
         }
     }
@@ -101,5 +119,5 @@ fun Home(items: List<String>) {
 @Preview(showBackground = true)
 @Composable
 fun PreviewHome() {
-    Home(listOf("Tanu", "Tina", "Tono"))
+    Home()
 }
