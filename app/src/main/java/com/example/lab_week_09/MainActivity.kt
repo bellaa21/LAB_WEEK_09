@@ -150,30 +150,16 @@ fun HomeContent(
 
 @Composable
 fun ResultContent(listData: String) {
-    val moshi = remember { Moshi.Builder().add(KotlinJsonAdapterFactory()).build() }
-    val type = remember {
-        Types.newParameterizedType(List::class.java, Student::class.java)
-    }
-    val adapter = remember { moshi.adapter<List<Student>>(type) }
-
-    val students: List<Student> = remember(listData) {
-        adapter.fromJson(listData) ?: emptyList()
-    }
 
     Column(
         modifier = Modifier
+            .fillMaxSize()
             .padding(16.dp)
-            .fillMaxSize(),
-        horizontalAlignment = Alignment.Start
-    )
-
-    {
+    ) {
         Text(
-            text = students.joinToString { "Student(name=${it.name})" },
+            text = listData,
             style = MaterialTheme.typography.bodySmall
         )
-
-        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
