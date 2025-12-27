@@ -9,38 +9,66 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavHostController
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.lab_week_09.ui.theme.LAB_WEEK_09Theme
-import com.example.lab_week_09.R
+import com.example.lab_week_09.ui.theme.OnBackgroundItemText
+import com.example.lab_week_09.ui.theme.OnBackgroundTitleText
+import com.example.lab_week_09.ui.theme.PrimaryTextButton
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.Types
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 
-data class Student(
-    var name: String
-)
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         setContent {
             LAB_WEEK_09Theme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    Home()
+                    val navController = rememberNavController()
+                    App(navController)
                 }
             }
         }
     }
 }
 
-@Composable
-fun Home() {
+data class Student(var name: String)
 
+@Composable
+fun App(navController: NavHostController) {
+    NavHost(navController = navController, startDestination = "home") {
+        composable("home") {
+            Home { json ->
+                navController.navigate("resultContent/?listData=$json")
+            }
+        }
+        composable(
+            "resultContent/?listData={listData}",
+            arguments = listOf(navArgument("listData") { type = NavType.StringType })
+        ) {
+            val json = it.arguments?.getString("listData").orEmpty()
+            ResultContent(json)
+        }
+    }
+}
+
+@Composable
+fun Home(navigateFromHomeToResult: (String) -> Unit) {
     val listData = remember {
         mutableStateListOf(
             Student("Tanu"),
@@ -48,75 +76,111 @@ fun Home() {
             Student("Tono")
         )
     }
+    var inputField by remember { mutableStateOf(Student("")) }
 
-    var inputField by remember { mutableStateOf("") }
+    val moshi = remember { Moshi.Builder().add(KotlinJsonAdapterFactory()).build() }
+    val type = remember {
+        Types.newParameterizedType(List::class.java, Student::class.java)
+    }
+    val adapter = remember { moshi.adapter<List<Student>>(type) }
 
     HomeContent(
         listData = listData,
-        inputValue = inputField,
-        onInputChange = { inputField = it },
-        onSubmit = {
-            if (inputField.isNotBlank()) {
-                listData.add(Student(inputField))
-                inputField = ""
+        inputField = inputField,
+        onInputValueChange = { inputField = inputField.copy(name = it) },
+        onButtonClick = {
+            if (inputField.name.isNotBlank()) {
+                listData.add(inputField)
+                inputField = Student("")
             }
+        },
+        navigateFromHomeToResult = {
+            val json = adapter.toJson(listData.toList())
+            navigateFromHomeToResult(json)
         }
     )
 }
 
 @Composable
 fun HomeContent(
-    listData: List<Student>,
-    inputValue: String,
-    onInputChange: (String) -> Unit,
-    onSubmit: () -> Unit
+    listData: SnapshotStateList<Student>,
+    inputField: Student,
+    onInputValueChange: (String) -> Unit,
+    onButtonClick: () -> Unit,
+    navigateFromHomeToResult: () -> Unit
 ) {
-
     LazyColumn {
         item {
             Column(
                 modifier = Modifier
                     .padding(16.dp)
-                    .fillMaxWidth(),
+                    .fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-
-                Text(text = stringResource(id = R.string.enter_item))
-
-                Spacer(modifier = Modifier.height(8.dp))
-
+                OnBackgroundTitleText(text = stringResource(id = R.string.enter_item))
                 TextField(
-                    value = inputValue,
-                    onValueChange = { onInputChange(it) },
-                    modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Text
-                    )
+                    value = inputField.name,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                    onValueChange = { onInputValueChange(it) }
                 )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Button(onClick = { onSubmit() }) {
-                    Text(text = stringResource(id = R.string.button_click))
+                Row {
+                    PrimaryTextButton(
+                        text = stringResource(id = R.string.button_click),
+                        onClick = onButtonClick
+                    )
+                    PrimaryTextButton(
+                        text = stringResource(id = R.string.button_navigate),
+                        onClick = navigateFromHomeToResult
+                    )
                 }
             }
         }
-
-        items(listData) { student ->
+        items(listData) { item ->
             Column(
                 modifier = Modifier
                     .padding(vertical = 4.dp)
-                    .fillMaxWidth(),
+                    .fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(text = student.name)
+                OnBackgroundItemText(text = item.name)
             }
         }
+    }
+}
+
+@Composable
+fun ResultContent(listData: String) {
+    val moshi = remember { Moshi.Builder().add(KotlinJsonAdapterFactory()).build() }
+    val type = remember {
+        Types.newParameterizedType(List::class.java, Student::class.java)
+    }
+    val adapter = remember { moshi.adapter<List<Student>>(type) }
+
+    val students: List<Student> = remember(listData) {
+        adapter.fromJson(listData) ?: emptyList()
+    }
+
+    Column(
+        modifier = Modifier
+            .padding(16.dp)
+            .fillMaxSize(),
+        horizontalAlignment = Alignment.Start
+    )
+
+    {
+        Text(
+            text = students.joinToString { "Student(name=${it.name})" },
+            style = MaterialTheme.typography.bodySmall
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
 @Preview(showBackground = true)
 @Composable
 fun PreviewHome() {
-    Home()
+    LAB_WEEK_09Theme {
+        Home(navigateFromHomeToResult = {})
+    }
 }
